@@ -14,7 +14,7 @@ DATA_FILE = "scheduler_jobs.json"  # 存任务的文件
 class SchedulerBotPlugin(BasePlugin):
 
     def __init__(self, host: APIHost):
-        self.tasks = []   # 存放 asyncio.Task 对象
+        self.tasks = []  # 存放 asyncio.Task 对象
         self.jobs = {"group": {}, "person": {}}
         # jobs = { "group": {group_id: [job...]}, "person": {user_id: [job...]} }
         self.loop = asyncio.get_event_loop()
@@ -161,13 +161,16 @@ class SchedulerBotPlugin(BasePlugin):
         # 查看任务
         if msg == "/list":
             jobs = jobs_dict.get(str(target_id), [])
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             if not jobs:
-                ctx.add_return("reply", ["暂无定时任务"])
+                ctx.add_return("reply", [f"暂无定时任务\n当前时间: {current_time}"])
             else:
                 text = "当前定时任务:\n"
                 for i, job in enumerate(jobs, 1):
                     text += f"{i}. 每天 {job['hour']:02d}:{job['minute']:02d} - {job['url']}\n"
-                ctx.add_return("reply", [text.strip()])
+                text += f"\n当前时间: {current_time}"
+                ctx.add_return("reply", [text])
             ctx.prevent_default()
             return
 
