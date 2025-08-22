@@ -4,7 +4,7 @@ metadata:
   # author 和 name 唯一确定一个插件
   author: wangling  # 插件作者，修改为你的名称
   name: SchedulerBot  # 插件名称，修改为你的插件名称
-  repository: 'https://github.com/langbot-app/HelloPlugin'  # 插件仓库地址，修改为你的插件 GitHub 仓库地址
+  repository: 'https://github.com/chenpuhao/SchedulerBot'  # 插件仓库地址，修改为你的插件 GitHub 仓库地址
   version: 0.1.0  # 插件版本，修改为你的插件版本
   description:  # 插件简介，修改为你的插件简介，支持多语言
     en_US: SchedulerBot
