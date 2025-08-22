@@ -1,0 +1,14 @@
+apiVersion: v1  # 不要改动
+kind: Plugin  # 不要改动
+metadata:
+  # author 和 name 唯一确定一个插件
+  author: wangling  # 插件作者，修改为你的名称
+  name: SchedulerBot  # 插件名称，修改为你的插件名称
+  repository: 'https://github.com/langbot-app/HelloPlugin'  # 插件仓库地址，修改为你的插件 GitHub 仓库地址
+  version: 0.1.0  # 插件版本，修改为你的插件版本
+  description:  # 插件简介，修改为你的插件简介，支持多语言
+    en_US: SchedulerBot
+    zh_CN: 群/私聊定时消息插件
+  label:  # 插件显示名称，支持多语言。在 WebUI 上会显示对应语言的 label
+    en_US: SchedulerBot
+    zh_CN: SchedulerBot
