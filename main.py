@@ -10,7 +10,7 @@ from pkg.plugin.events import GroupNormalMessageReceived, PersonNormalMessageRec
 DATA_FILE = "scheduler_jobs.json"  # 存任务的文件
 
 
-@register(name="SchedulerBot", description="群/私聊定时消息插件(支持持久化)", version="2.2", author="RockChinQ-改")
+@register(name="SchedulerBot", description="群/私聊定时消息插件(支持持久化)", version="0.1.0", author="wangling")
 class SchedulerBotPlugin(BasePlugin):
 
     def __init__(self, host: APIHost):
