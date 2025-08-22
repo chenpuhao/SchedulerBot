@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 import json
 import os
+import re
 from datetime import datetime, timedelta
 from pkg.plugin.context import register, handler, BasePlugin, APIHost, EventContext
 from pkg.plugin.events import GroupNormalMessageReceived, PersonNormalMessageReceived
@@ -9,7 +10,7 @@ from pkg.plugin.events import GroupNormalMessageReceived, PersonNormalMessageRec
 DATA_FILE = "scheduler_jobs.json"  # 存任务的文件
 
 
-@register(name="SchedulerBot", description="群/私聊定时消息插件(支持持久化)", version="2.0", author="wangling")
+@register(name="SchedulerBot", description="群/私聊定时消息插件(支持持久化)", version="2.2", author="RockChinQ-改")
 class SchedulerBotPlugin(BasePlugin):
 
     def __init__(self, host: APIHost):
@@ -96,48 +97,66 @@ class SchedulerBotPlugin(BasePlugin):
         else:
             self.jobs = {"group": {}, "person": {}}
 
+    def parse_set_command(self, msg: str):
+        """解析 /set {url} {HH/MM} 格式的命令"""
+        # 使用正则表达式匹配 /set {url} {HH/MM}
+        pattern = r'/set\s+\{([^}]+)\}\s+\{(\d{1,2}/\d{1,2})\}'
+        match = re.match(pattern, msg.strip())
+        if match:
+            url = match.group(1)
+            time_str = match.group(2)
+            try:
+                hour, minute = map(int, time_str.split("/"))
+                return url, hour, minute
+            except ValueError:
+                return None
+        return None
+
     # ===== 公共命令处理逻辑 =====
     async def handle_command(self, ctx: EventContext, is_group: bool):
         msg = ctx.event.text_message.strip()
         target_id = ctx.event.group_id if is_group else ctx.event.sender_id
         jobs_dict = self.jobs["group"] if is_group else self.jobs["person"]
 
-        # 帮助
-        if msg.startswith("/set") and msg.strip() == "/set help":
+        # 帮助命令
+        if msg == "/help":
             help_text = (
-                "使用方法:\n"
+                "定时任务插件使用方法:\n"
                 "/set {url} {HH/MM} - 添加定时任务\n"
                 "/list - 查看任务\n"
                 "/del {index} - 删除指定任务\n"
-                "示例: /set http://example.com/msg.txt 08/30"
+                "/help - 显示帮助\n"
+                "示例: /set {http://example.com/msg.txt} {08/30}"
             )
             ctx.add_return("reply", [help_text])
             ctx.prevent_default()
             return
 
         # 设置任务
-        if msg.startswith("/set "):
-            parts = msg.split()
-            if len(parts) == 3:
-                url = parts[1]
-                try:
-                    hour, minute = map(int, parts.split("/"))
-                except ValueError:
-                    ctx.add_return("reply", ["时间格式错误，应为 HH/MM"])
-                    ctx.prevent_default()
-                    return
-
-                task = self.loop.create_task(
-                    self.schedule_job(target_id, url, hour, minute, is_group=is_group)
-                )
-                job = {"url": url, "hour": hour, "minute": minute, "task": task}
-                jobs_dict.setdefault(str(target_id), []).append(job)
-                self.tasks.append(task)
-                self.save_jobs()
-
-                ctx.add_return("reply", [f"已设置任务: 每天 {hour:02d}:{minute:02d} 请求 {url}"])
+        if msg.startswith("/set {"):
+            result = self.parse_set_command(msg)
+            if result is None:
+                ctx.add_return("reply", ["格式错误，请使用: /set {url} {HH/MM}"])
                 ctx.prevent_default()
                 return
+
+            url, hour, minute = result
+            if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                ctx.add_return("reply", ["时间格式错误，小时应为00-23，分钟应为00-59"])
+                ctx.prevent_default()
+                return
+
+            task = self.loop.create_task(
+                self.schedule_job(target_id, url, hour, minute, is_group=is_group)
+            )
+            job = {"url": url, "hour": hour, "minute": minute, "task": task}
+            jobs_dict.setdefault(str(target_id), []).append(job)
+            self.tasks.append(task)
+            self.save_jobs()
+
+            ctx.add_return("reply", [f"已设置任务: 每天 {hour:02d}:{minute:02d} 请求 {url}"])
+            ctx.prevent_default()
+            return
 
         # 查看任务
         if msg == "/list":
@@ -153,11 +172,13 @@ class SchedulerBotPlugin(BasePlugin):
             return
 
         # 删除任务
-        if msg.startswith("/del"):
-            parts = msg.split()
-            if len(parts) == 2:
+        if msg.startswith("/del {") and msg.endswith("}"):
+            # 解析 /del {index}
+            pattern = r'/del\s+\{(\d+)\}'
+            match = re.match(pattern, msg.strip())
+            if match:
                 try:
-                    index = int(parts[1]) - 1
+                    index = int(match.group(1)) - 1
                     jobs = jobs_dict.get(str(target_id), [])
                     if 0 <= index < len(jobs):
                         job = jobs.pop(index)
